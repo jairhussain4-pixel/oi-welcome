@@ -1,20 +1,30 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, Fragment } from "react";
 import { CosmicShell, GoldButton } from "../components/CosmicShell";
+import { QuestionVideoPlayer } from "../components/QuestionVideoPlayer";
 
 export const Route = createFileRoute("/quiz")({
   component: QuizPage,
 });
 
-interface Question {
+export interface Question {
+  id: string;
+  videoUrl?: string; // Insira aqui a URL do vídeo de cada pergunta (ex: "/assets/videos/pergunta1.mp4" ou link de CDN/VTurb)
+  posterUrl?: string;
+  simulatedDurationSeconds?: number;
   kicker?: string;
   lead?: string;
   title: [string, boolean?][];
   options: { emoji?: string; text: string }[];
 }
 
-const questions: Question[] = [
+// Configuração de cada vídeo e pergunta individual da VSL
+export const questions: Question[] = [
   {
+    id: "pergunta-1",
+    videoUrl: "", // URL do vídeo da modelo para a pergunta 1
+    posterUrl: "/assets/reader-portrait.jpg",
+    simulatedDurationSeconds: 5,
     title: [
       ["Which of these sentences feels\nlike it was "],
       ["written about you", true],
@@ -28,6 +38,10 @@ const questions: Question[] = [
     ],
   },
   {
+    id: "pergunta-2",
+    videoUrl: "", // URL do vídeo da modelo para a pergunta 2
+    posterUrl: "/assets/reader-portrait.jpg",
+    simulatedDurationSeconds: 5,
     title: [
       ["When you think about "],
       ["your relationships", true],
@@ -41,6 +55,10 @@ const questions: Question[] = [
     ],
   },
   {
+    id: "pergunta-3",
+    videoUrl: "", // URL do vídeo da modelo para a pergunta 3
+    posterUrl: "/assets/reader-portrait.jpg",
+    simulatedDurationSeconds: 5,
     title: [
       ["If 2026 could bring "],
       ["one real\ntransformation", true],
@@ -54,6 +72,10 @@ const questions: Question[] = [
     ],
   },
   {
+    id: "pergunta-4",
+    videoUrl: "", // URL do vídeo da modelo para a pergunta 4
+    posterUrl: "/assets/reader-portrait.jpg",
+    simulatedDurationSeconds: 5,
     title: [
       [
         "Has this happened to you? You look around\nand everyone seems to be moving forward...\nwhile you feel ",
@@ -68,6 +90,10 @@ const questions: Question[] = [
     ],
   },
   {
+    id: "pergunta-5",
+    videoUrl: "", // URL do vídeo da modelo para a pergunta 5
+    posterUrl: "/assets/reader-portrait.jpg",
+    simulatedDurationSeconds: 6,
     kicker: "(Last question before your reading)",
     lead: "If the cards revealed TODAY what is blocking your life and showed you the exact path to unlock it...",
     title: [["Would you be ready to follow that guidance?"]],
@@ -106,6 +132,7 @@ function QuizPage() {
             key={`q${state.index}`}
             index={state.index}
             question={questions[state.index]}
+            totalQuestions={questions.length}
             onAnswer={() =>
               transitionTo(
                 state.index + 1 < questions.length
@@ -144,13 +171,25 @@ function ProgressBar({ value, className = "" }: { value: number; className?: str
 function QuestionStep({
   index,
   question,
+  totalQuestions,
   onAnswer,
 }: {
   index: number;
   question: Question;
+  totalQuestions: number;
   onAnswer: () => void;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  const handleVideoFinished = () => {
+    setIsRevealed(true);
+    // Smoothly scroll down so options are visible on smaller mobile devices
+    setTimeout(() => {
+      optionsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 150);
+  };
 
   const handleSelect = (optIndex: number) => {
     if (selected === null) {
@@ -164,60 +203,82 @@ function QuestionStep({
   return (
     <>
       <ProgressBar value={progress} className="mt-12" />
+
       <div className="fade-in flex w-full flex-col items-center">
-        {question.kicker && (
-          <p className="mt-14 text-center text-[13px] uppercase tracking-[0.3em] text-gold">
-            {question.kicker}
-          </p>
-        )}
-        {question.lead && (
-          <p className="mt-5 max-w-[520px] text-center text-base font-light leading-[2.25] text-foreground/70">
-            {question.lead}
-          </p>
-        )}
-        <h1
-          className={`max-w-[632px] whitespace-pre-line text-center font-display text-[1.75rem] leading-[1.5] text-foreground sm:text-[2.05rem] ${
-            question.kicker ? "mt-6" : "mt-14"
-          }`}
-        >
-          {question.title.map(([text, isGold], i) =>
-            isGold ? (
-              <span key={i} className="text-gold">
-                {text}
-              </span>
-            ) : (
-              <Fragment key={i}>{text}</Fragment>
-            )
-          )}
-        </h1>
+        {/* VSL Interactive Video Player for each specific question */}
+        <QuestionVideoPlayer
+          videoUrl={question.videoUrl}
+          posterUrl={question.posterUrl}
+          questionNumber={index + 1}
+          totalQuestions={totalQuestions}
+          simulatedDurationSeconds={question.simulatedDurationSeconds}
+          onVideoEnd={handleVideoFinished}
+          isRevealed={isRevealed}
+          onSkip={handleVideoFinished}
+        />
 
-        <div className="mt-11 flex w-full max-w-[632px] flex-col gap-4">
-          {question.options.map((opt, i) => {
-            const isChosen = selected === i;
-            const isOther = selected !== null && !isChosen;
-
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => handleSelect(i)}
-                className={`flex w-full items-center gap-4 border bg-foreground/[0.025] px-5 text-left text-base text-foreground/90 transition-all duration-300 cursor-pointer ${
-                  opt.emoji ? "min-h-[89px] py-4" : "min-h-[70px] py-4"
-                } ${
-                  isChosen
-                    ? "border-gold/80 text-foreground shadow-option"
-                    : "border-foreground/10 hover:border-gold/70"
-                } ${isOther ? "opacity-40" : "opacity-100"}`}
-              >
-                {opt.emoji && (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-foreground/10 bg-background/60 text-[22px]">
-                    {opt.emoji}
-                  </span>
+        {/* Dynamic Question Title and Options: only reveals when video finishes */}
+        <div ref={optionsRef} className="w-full max-w-[632px]">
+          {isRevealed ? (
+            <div className="rise-in mt-8 flex flex-col items-center">
+              {question.kicker && (
+                <p className="text-center text-[13px] uppercase tracking-[0.3em] text-gold">
+                  {question.kicker}
+                </p>
+              )}
+              {question.lead && (
+                <p className="mt-3 max-w-[520px] text-center text-base font-light leading-[1.8] text-foreground/75">
+                  {question.lead}
+                </p>
+              )}
+              <h1 className="mt-3 max-w-[632px] whitespace-pre-line text-center font-display text-[1.65rem] leading-[1.4] text-foreground sm:text-[1.95rem]">
+                {question.title.map(([text, isGold], i) =>
+                  isGold ? (
+                    <span key={i} className="text-gold">
+                      {text}
+                    </span>
+                  ) : (
+                    <Fragment key={i}>{text}</Fragment>
+                  )
                 )}
-                <span>{opt.text}</span>
-              </button>
-            );
-          })}
+              </h1>
+
+              {/* Quadrados de resposta do quiz */}
+              <div className="mt-8 grid w-full grid-cols-1 gap-3.5 sm:grid-cols-2">
+                {question.options.map((opt, i) => {
+                  const isChosen = selected === i;
+                  const isOther = selected !== null && !isChosen;
+
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSelect(i)}
+                      className={`flex min-h-[92px] items-center gap-3.5 rounded-lg border bg-foreground/[0.03] p-4 text-left text-base text-foreground/90 transition-all duration-300 hover:scale-[1.01] cursor-pointer ${
+                        isChosen
+                          ? "border-gold/90 text-foreground shadow-option ring-1 ring-gold/40"
+                          : "border-foreground/15 hover:border-gold/70 hover:bg-foreground/[0.06]"
+                      } ${isOther ? "opacity-35" : "opacity-100"}`}
+                    >
+                      {opt.emoji && (
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/25 bg-background/80 text-[22px] shadow-sm">
+                          {opt.emoji}
+                        </span>
+                      )}
+                      <span className="leading-snug">{opt.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-8 flex flex-col items-center gap-2 text-center text-sm text-foreground/50">
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 animate-ping rounded-full bg-gold/70" />
+                Aguarde a modelo terminar de falar para desbloquear as respostas...
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </>

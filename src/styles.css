@@ -230,3 +230,16 @@
 .cta-pulse {
   animation: 2s ease-in-out infinite cta-pulse;
 }
+
+@keyframes audio-wave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+.audio-bar {
+  animation: audio-wave 0.8s ease-in-out infinite;
+}
